@@ -217,3 +217,11 @@ def test_buscar_jugador_devuelve_el_id(herramientas_con_db):
 def test_el_error_de_ambiguedad_dice_como_resolverlo(herramientas_con_db):
     error = herramientas_con_db.goles("Ronaldo")["error"]
     assert "id" in error and "`jugador`" in error
+
+
+def test_partidos_filtra_por_equipo_y_penales(herramientas_con_db):
+    francia = herramientas_con_db.partidos(1998, equipo="france")
+    assert len(francia) == 7 and all("France" in (p["local"], p["visitante"]) for p in francia)
+    penales = herramientas_con_db.partidos(2022, solo_penales=True)
+    assert penales and all(p["penales"] for p in penales)
+    assert "error" in herramientas_con_db.partidos(1998, equipo="Atlantis")

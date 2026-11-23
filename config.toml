@@ -15,5 +15,17 @@ max_pasos = 14        # el enunciado exige un tope de pasos...
 max_tokens = 80000    # ...y uno de tokens (entrada más salida, sumados sobre todas las llamadas)
 max_seg = 240         # opcional
 
+[reintentos]
+max_intentos = 3      # llamadas al servidor por paso, ante errores 5xx o de conexión
+espera_base_s = 1.0   # espera exponencial: 1, 2, 4 s
+
+[herramientas]
+timeout_s = 20        # una herramienta que tarda más se corta y vuelve como error
+
+[loop]
+max_recordatorios = 2       # veces que se le pide al modelo que llame a terminar si contesta en texto
+aviso_ultimo_paso = true    # en el último paso solo se ofrece terminar
+elementos_lista_max = 25    # las listas más largas se recortan por elementos, con el total exacto
+
 [contexto]
 tope_resultado_caracteres = 4000   # un resultado de herramienta más largo se recorta antes de volver al modelo

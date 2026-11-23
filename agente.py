@@ -32,15 +32,31 @@ from pathlib import Path
 
 import config as configuracion
 import llm
-from herramientas.mundial import FICHAS, HERRAMIENTAS  # noqa: F401  (los vas a usar en `bucle`)
+from harness import loop
+from herramientas.mundial import FICHAS, HERRAMIENTAS
 from trazas.registro import Registro, SinRegistro
 
 RAIZ = Path(__file__).resolve().parent
 
 
+SISTEMA = """Sos un agente que responde preguntas sobre los Mundiales de fútbol usando SOLO los datos \
+que devuelven las herramientas (la Fjelstul World Cup Database). No uses lo que sabés de memoria: \
+todo dato de la respuesta tiene que haber salido de una herramienta.
+
+Reglas:
+- Los nombres de selecciones y países están en inglés (Argentina, West Germany, United States).
+- Si una búsqueda de jugador es ambigua, elegí el candidato por su id (P-xxxxx) y volvé a llamar con el id.
+- Para cualquier cuenta (sumas, restas, edades, diferencias de fechas) usá calcular; no hagas cuentas de cabeza.
+- Para contar elementos de una lista larga, usá el campo total_elementos si aparece.
+- Cuando tengas la respuesta, llamá a terminar(respuesta, motivo) con la respuesta en el formato que pide la pregunta.
+- Si los datos de las herramientas no alcanzan para responder (el dato no existe en la base, o el torneo \
+o el jugador no están), llamá a terminar con respuesta null y un motivo que diga qué dato falta. \
+Nunca inventes una respuesta."""
+
+
 def bucle(pregunta: str, config: dict, registro) -> tuple[str, str | None, int]:
     """Devuelve (estado, respuesta, pasos). Estados: respondida, negada, tope_pasos, tope_tokens, error."""
-    raise NotImplementedError("el loop todavía no está implementado: es el trabajo del Bloque 1")
+    return loop.correr(pregunta, config, registro, sistema=SISTEMA, fichas=FICHAS, herramientas=HERRAMIENTAS)
 
 
 def entorno_del_servidor(modelo: str) -> dict:
@@ -65,8 +81,9 @@ def main() -> int:
     registro.evento("corrida_inicio", modelo=modelo, config=config | entorno_del_servidor(modelo))
     try:
         estado, respuesta, pasos = bucle(argumentos.pregunta, config, registro)
-    except NotImplementedError as error:
-        registro.evento("corrida_fin", estado="error", respuesta=None, pasos=0, motivo=str(error))
+    except Exception as error:   # noqa: BLE001 — un bug del harness igual cierra la traza
+        registro.evento("corrida_fin", estado="error", respuesta=None, pasos=0,
+                        motivo=f"{type(error).__name__}: {error}")
         print(error, file=sys.stderr)
         return 1
     registro.evento("corrida_fin", estado=estado, respuesta=respuesta, pasos=pasos)

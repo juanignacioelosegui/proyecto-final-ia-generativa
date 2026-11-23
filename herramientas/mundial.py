@@ -151,10 +151,23 @@ def goleadores(torneo: int, n: int = 5):
     return {"torneo": int(torneo), "goleadores": ranking[:n], "empate_en_el_corte": empate}
 
 
-def partidos(torneo: int):
+def partidos(torneo: int, equipo: str | None = None, solo_penales: bool = False):
+    # Filtros agregados por el grupo (decision_log, Bloque 1): sin ellos, un torneo de 64 partidos no
+    # entra en el recorte de resultados y el dato que se busca queda afuera de la ventana.
     id_torneo = _id_torneo(torneo)
     if id_torneo is None:
         return _error_torneo(torneo)
+    lista = _partidos(id_torneo)
+    if equipo:
+        lista = [p for p in lista if _normalizar(equipo) in (_normalizar(p["local"]), _normalizar(p["visitante"]))]
+        if not lista:
+            return {"error": f"«{equipo}» no jugó el Mundial {torneo} (los nombres van en inglés)."}
+    if solo_penales:
+        lista = [p for p in lista if p["penales"] is not None]
+    return lista
+
+
+def _partidos(id_torneo: str):
     filas = _sql(
         "SELECT m.match_date, m.stage_name, h.team_name AS local, a.team_name AS visitante, m.score, "
         "m.penalty_shootout, m.score_penalties, s.stadium_name, s.city_name "
@@ -295,8 +308,12 @@ FICHAS_POR_NOMBRE = {
         ("jugador",)),
     "partidos": _ficha(
         "partidos",
-        "Lista los partidos de un Mundial: fecha, etapa, equipos, resultado y estadio.",
-        {"torneo": {"type": "integer", "description": "Año del torneo. Ejemplo: 1986"}},
+        "Lista los partidos de un Mundial: fecha, etapa, equipos, resultado (sin la tanda de penales), "
+        "penales (resultado de la tanda, o null) y estadio. Se puede filtrar por selección o por "
+        "partidos definidos por penales.",
+        {"torneo": {"type": "integer", "description": "Año del torneo. Ejemplo: 1986"},
+         "equipo": {"type": "string", "description": "Solo los partidos de esta selección, en inglés. Ejemplo: France"},
+         "solo_penales": {"type": "boolean", "description": "true para ver solo los partidos que se definieron por penales"}},
         ("torneo",)),
     "calcular": _ficha(
         "calcular",
